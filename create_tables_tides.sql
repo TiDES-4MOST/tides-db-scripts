@@ -22,7 +22,7 @@ CREATE TABLE tides_cand (
 CREATE TABLE tides_spec (
   tides_id BIGINT REFERENCES tides_cand(tides_id),
   qmost_id BIGINT PRIMARY KEY,
-  type VARCHAR(50),
+  sn_type VARCHAR(50),
   obs_date TIMESTAMP,
   obs_mjd FLOAT,
   snr FLOAT,
