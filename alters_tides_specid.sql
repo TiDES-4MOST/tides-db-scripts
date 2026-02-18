@@ -38,16 +38,18 @@ BEGIN
     ) s;
 
     IF nulls_count > 0 THEN
-        RAISE WARNING '% rows have NULL tides_specid - PRIMARY KEY will allow NULLs but re-run pipeline to populate', nulls_count;
-    END IF;
-    
-    IF dups_count > 0 THEN
+        RAISE WARNING '% rows have NULL tides_specid - cannot add PRIMARY KEY. Re-run pipeline to populate, then run: ALTER TABLE tides_spec ADD PRIMARY KEY (tides_specid);', nulls_count;
+        -- Add UNIQUE constraint for now (allows NULLs)
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'tides_spec'::regclass AND conname = 'tides_spec_specid_unique') THEN
+            ALTER TABLE tides_spec ADD CONSTRAINT tides_spec_specid_unique UNIQUE (tides_specid);
+            RAISE NOTICE 'Added UNIQUE constraint on tides_specid (allows NULLs, prevents duplicates)';
+        END IF;
+    ELSIF dups_count > 0 THEN
         RAISE WARNING '% duplicate tides_specid values found - cannot add PRIMARY KEY. Resolve duplicates first.', dups_count;
     ELSE
-        -- Note: PostgreSQL PRIMARY KEY automatically creates NOT NULL constraint, 
-        -- but existing NULLs won't violate this since they were added before the constraint
+        -- No NULLs and no duplicates - safe to add PRIMARY KEY
         ALTER TABLE tides_spec ADD PRIMARY KEY (tides_specid);
-        RAISE NOTICE 'SUCCESS: PRIMARY KEY added on tides_specid (% NULL values will be populated by pipeline)', nulls_count;
+        RAISE NOTICE 'SUCCESS: PRIMARY KEY added on tides_specid';
     END IF;
 END $$;
 
@@ -99,40 +101,56 @@ ALTER TABLE IF EXISTS human_classifications ADD COLUMN IF NOT EXISTS phase DOUBL
 ALTER TABLE IF EXISTS human_classifications ADD COLUMN IF NOT EXISTS host_z DOUBLE PRECISION;
 
 -- STEP 9: Add FOREIGN KEY constraints from pipeline tables to tides_spec(tides_specid)
+-- Only add if tides_spec has either PRIMARY KEY or UNIQUE constraint on tides_specid
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_global_specid') THEN
-        ALTER TABLE pipeline_classification_global
-        ADD CONSTRAINT fk_pclass_global_specid
-        FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
-        DEFERRABLE INITIALLY DEFERRED;
-    END IF;
+    -- Check if tides_spec has PK or UNIQUE constraint on tides_specid
+    IF EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conrelid = 'tides_spec'::regclass 
+        AND (contype = 'p' OR contype = 'u')
+        AND conkey = (SELECT array_agg(attnum) FROM pg_attribute WHERE attrelid = 'tides_spec'::regclass AND attname = 'tides_specid')
+    ) THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_global_specid') THEN
+            ALTER TABLE pipeline_classification_global
+            ADD CONSTRAINT fk_pclass_global_specid
+            FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
+            DEFERRABLE INITIALLY DEFERRED;
+            RAISE NOTICE 'Added FK: pipeline_classification_global → tides_spec';
+        END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_snid_specid') THEN
-        ALTER TABLE pipeline_classification_snid
-        ADD CONSTRAINT fk_pclass_snid_specid
-        FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
-        DEFERRABLE INITIALLY DEFERRED;
-    END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_snid_specid') THEN
+            ALTER TABLE pipeline_classification_snid
+            ADD CONSTRAINT fk_pclass_snid_specid
+            FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
+            DEFERRABLE INITIALLY DEFERRED;
+            RAISE NOTICE 'Added FK: pipeline_classification_snid → tides_spec';
+        END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_superfit_specid') THEN
-        ALTER TABLE pipeline_classification_superfit
-        ADD CONSTRAINT fk_pclass_superfit_specid
-        FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
-        DEFERRABLE INITIALLY DEFERRED;
-    END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_superfit_specid') THEN
+            ALTER TABLE pipeline_classification_superfit
+            ADD CONSTRAINT fk_pclass_superfit_specid
+            FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
+            DEFERRABLE INITIALLY DEFERRED;
+            RAISE NOTICE 'Added FK: pipeline_classification_superfit → tides_spec';
+        END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_dash_specid') THEN
-        ALTER TABLE pipeline_classification_dash
-        ADD CONSTRAINT fk_pclass_dash_specid
-        FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
-        DEFERRABLE INITIALLY DEFERRED;
-    END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_dash_specid') THEN
+            ALTER TABLE pipeline_classification_dash
+            ADD CONSTRAINT fk_pclass_dash_specid
+            FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
+            DEFERRABLE INITIALLY DEFERRED;
+            RAISE NOTICE 'Added FK: pipeline_classification_dash → tides_spec';
+        END IF;
 
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_ed_specid') THEN
-        ALTER TABLE pipeline_classification_ed
-        ADD CONSTRAINT fk_pclass_ed_specid
-        FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
-        DEFERRABLE INITIALLY DEFERRED;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_pclass_ed_specid') THEN
+            ALTER TABLE pipeline_classification_ed
+            ADD CONSTRAINT fk_pclass_ed_specid
+            FOREIGN KEY (tides_specid) REFERENCES tides_spec(tides_specid)
+            DEFERRABLE INITIALLY DEFERRED;
+            RAISE NOTICE 'Added FK: pipeline_classification_ed → tides_spec';
+        END IF;
+    ELSE
+        RAISE WARNING 'Skipping FOREIGN KEY creation - tides_spec.tides_specid needs PRIMARY KEY or UNIQUE constraint first';
     END IF;
 END $$;
