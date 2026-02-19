@@ -106,11 +106,13 @@ ALTER TABLE IF EXISTS pipeline_classification_global ADD COLUMN IF NOT EXISTS ze
 ALTER TABLE IF EXISTS pipeline_classification_snid ADD COLUMN IF NOT EXISTS phase DOUBLE PRECISION;
 ALTER TABLE IF EXISTS pipeline_classification_snid ADD COLUMN IF NOT EXISTS z DOUBLE PRECISION;
 ALTER TABLE IF EXISTS pipeline_classification_snid ADD COLUMN IF NOT EXISTS zerr DOUBLE PRECISION;
+ALTER TABLE IF EXISTS pipeline_classification_snid ADD COLUMN IF NOT EXISTS results_file TEXT;
 
 ALTER TABLE IF EXISTS pipeline_classification_dash ADD COLUMN IF NOT EXISTS z DOUBLE PRECISION;
 
 ALTER TABLE IF EXISTS human_classifications ADD COLUMN IF NOT EXISTS phase DOUBLE PRECISION;
 ALTER TABLE IF EXISTS human_classifications ADD COLUMN IF NOT EXISTS host_z DOUBLE PRECISION;
+
 
 -- STEP 9: Add FOREIGN KEY constraints from pipeline tables to tides_spec(tides_specid)
 -- Only add if tides_spec has either PRIMARY KEY or UNIQUE constraint on tides_specid
