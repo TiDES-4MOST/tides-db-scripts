@@ -72,6 +72,18 @@ END $$;
 
 -- STEP 7: Add tides_specid to pipeline tables and index
 ALTER TABLE IF EXISTS pipeline_classification_global ADD COLUMN IF NOT EXISTS tides_specid BIGINT;
+
+-- Add UNIQUE constraint on tides_specid (one global classification per spectrum)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'pipeline_classification_global_tides_specid_key'
+    ) THEN
+        ALTER TABLE pipeline_classification_global ADD CONSTRAINT pipeline_classification_global_tides_specid_key UNIQUE (tides_specid);
+        RAISE NOTICE 'Added UNIQUE constraint on pipeline_classification_global.tides_specid';
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_pclass_global_specid ON pipeline_classification_global(tides_specid);
 
 ALTER TABLE IF EXISTS pipeline_classification_snid ADD COLUMN IF NOT EXISTS tides_specid BIGINT;
