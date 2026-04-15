@@ -115,7 +115,10 @@ CREATE TABLE pipeline_classification_superfit (
   tides_id BIGINT REFERENCES tides_cand(tides_id),
   sn_type VARCHAR(50),
   probability FLOAT,
-  version VARCHAR(20)
+  version VARCHAR(20),
+  z FLOAT,
+  z_err FLOAT,
+  phase FLOAT
 );
 
 -- Example for SNID classification
@@ -124,7 +127,10 @@ CREATE TABLE pipeline_classification_snid (
   tides_id BIGINT REFERENCES tides_cand(tides_id),
   sn_type VARCHAR(50),
   probability FLOAT,
-  version VARCHAR(20)
+  version VARCHAR(20),
+  z FLOAT,
+  z_err FLOAT,
+  phase FLOAT
 );
 
 -- Example for DASH classification
@@ -152,7 +158,10 @@ CREATE TABLE pipeline_classification_global (
   sn_type VARCHAR(50),
   probability FLOAT,
   version VARCHAR(20),
-  notes TEXT
+  notes TEXT,
+  z FLOAT,
+  z_err FLOAT,
+  phase FLOAT
 );
 
 -- TABLE: Human_Classifications (Marshall)

@@ -6,6 +6,10 @@ import psycopg2
 from psycopg2.extras import execute_values
 from astropy.io import fits
 import statistics
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def _obj_nme_to_bigint(val) -> int:
@@ -234,11 +238,12 @@ def upsert_tides_cand(conn, ids, table_name):
 def main():
     ap = argparse.ArgumentParser(description="Seed tom_targets_basetarget and tides_cand from MEC FITS")
     ap.add_argument('--fits', nargs='+', help='Path(s) to MEC FITS file(s)')
-    ap.add_argument('--host', default=os.getenv('PGHOST', 'localhost'))
-    ap.add_argument('--port', default=os.getenv('PGPORT', '5432'))
-    ap.add_argument('--dbname', default=os.getenv('PGDATABASE', 'tides_db'))
-    ap.add_argument('--user', default=os.getenv('PGUSER', 'pwise'))
-    ap.add_argument('--password', default=os.getenv('PGPASSWORD', ''))
+    ap.add_argument('--host', default=os.getenv('DB_HOST', 'localhost'))
+    ap.add_argument('--port', default=os.getenv('DB_PORT', '5432'))
+    ap.add_argument('--dbname', default=os.getenv('DB_NAME', 'tides_db'))
+    ap.add_argument('--user', default=os.getenv('DB_USER', 'tides'))
+    ap.add_argument('--password', default=os.getenv('DB_PASSWORD', ''))
+    ap.add_argument('--sslmode', default=os.getenv('DB_SSLMODE', 'prefer'))
     ap.add_argument('--target-table', default='tom_targets_basetarget')
     ap.add_argument('--cand-table', default='tides_cand')
     ap.add_argument('--name-prefix', default='TIDES-')
@@ -258,6 +263,7 @@ def main():
         dbname=args.dbname,
         user=args.user,
         password=args.password,
+        sslmode=args.sslmode,
     )
     try:
         conn.autocommit = False
